@@ -10,5 +10,5 @@ Todo:
 - [ ] encryption
 - [ ] get by id
 - [ ] get random
-- [ ] archive
+- [x] archive
 - [ ] get from archive
