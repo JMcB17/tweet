@@ -6,7 +6,7 @@ import sqlite3
 from pathlib import Path
 
 
-__version__ = '0.9.0'
+__version__ = '0.9.1'
 
 
 CREATE_TABLE_SQL = """CREATE TABLE tweets
@@ -19,7 +19,6 @@ db_folder_path = base_path / 'tweets'
 parser = argparse.ArgumentParser(description='Random thought saver. Just run it, or use -h for more info.')
 parser.add_argument('tweet', nargs='?', default=None,
                     help="'tweet' content. If you don't give it as an option, you'll be prompted to input it.")
-args = parser.parse_args()
 
 
 def get_db():
@@ -38,7 +37,7 @@ def get_db():
     return conn, cur
 
 
-def new_tweet(content=args.tweet):
+def new_tweet(content):
     if content is None:
         content = input('New tweet:\n')
 
@@ -61,7 +60,8 @@ def new_tweet(content=args.tweet):
 
 
 def main():
-    new_tweet()
+    args = parser.parse_args()
+    new_tweet(args.tweet)
 
 
 if __name__ == '__main__':
