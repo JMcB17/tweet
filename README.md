@@ -3,9 +3,9 @@ Got a ton of *hilarious* thoughts floating around in your head but can't be both
 With a pip install you can add it to your path and just win+r tweet whenever you have an idea.
 
 Todo:
-- Main code
-- encryption
-- get by id
-- get random
-- archive
-- get from archive
+- [x] Main code
+- [ ] encryption
+- [ ] get by id
+- [ ] get random
+- [ ] archive
+- [ ] get from archive
