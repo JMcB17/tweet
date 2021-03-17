@@ -6,7 +6,7 @@ import sqlite3
 from pathlib import Path
 
 
-__version__ = '0.21.0'
+__version__ = '0.22.0'
 
 
 CREATE_TABLE_SQL = """CREATE TABLE tweets
@@ -20,15 +20,17 @@ archive_folder_path = db_folder_path / 'archive'
 
 parser = argparse.ArgumentParser(description='Random thought saver. Just run it, or use -h for more info.')
 parser.add_argument('--version', action='version', version=__version__)
-parser.add_argument('-t', '--tweet', nargs='+',
+parser.add_argument('-t', '--tweet',
                     help="'tweet' content. If you don't give it as an option, you'll be prompted to input it")
 subparsers = parser.add_subparsers(help='subcommands', dest='subcommand')
 
 archive_parser = subparsers.add_parser(name='archive',
-                                       help='archive the old tweets file, make a new one, and exit')
+                                       help='archive the old tweets file and make a new one')
 
 list_parser = subparsers.add_parser(name='list',
                                     help='list tweets')
+list_parser.add_argument('-a', '--archive',
+                         help='use this archive file instead of the current file')
 list_parser.add_argument('-l', action='store_true',
                          help='show ids as well')
 list_parser.add_argument('-i', '--id-only', action='store_true', dest='i',
@@ -37,6 +39,9 @@ list_parser.add_argument('-t', '--timestamp', action='store_true', dest='t',
                          help='show human readable timestamps as well')
 list_parser.add_argument('-n', '--max-count', type=int, dest='n',
                          help='limit the number of tweets to output')
+
+list_archives_parser = subparsers.add_parser(name='list-archives',
+                                             help='list archives')
 
 
 def get_db():
@@ -55,7 +60,8 @@ def get_db():
 
 
 def new_tweet(args):
-    content = args.content
+    content = args.tweet
+    pause = content is None
     if content is None:
         content = input('New tweet:\n')
     elif isinstance(content, list):
@@ -78,6 +84,10 @@ def new_tweet(args):
     conn.close()
     print('Saved tweet')
 
+    if pause:
+        print('Press enter to exit')
+        input()
+
 
 def archive():
     timestamp = time.time()
@@ -97,9 +107,31 @@ def archive():
     print('Created new tweets file')
 
 
+def get_archive_db(archive_name):
+    archive_file_path = archive_folder_path.joinpath(archive_name).with_suffix('.db')
+
+    if not archive_file_path.is_file():
+        raise FileNotFoundError
+    else:
+        conn = sqlite3.connect(archive_file_path)
+        cur = conn.cursor()
+        return conn, cur
+
+
 def list_tweets(args):
-    conn, cur = get_db()
-    cur.execute('SELECT * FROM tweets')
+    if args.archive:
+        try:
+            conn, cur = get_archive_db(args.archive)
+        except FileNotFoundError:
+            print("That archive doesn't exist!")
+            return
+    else:
+        conn, cur = get_db()
+
+    if args.n is not None:
+        cur.execute('SELECT * FROM tweets LIMIT ?', (args.n,))
+    else:
+        cur.execute('SELECT * FROM tweets')
     tweets = cur.fetchall()
     conn.close()
 
@@ -107,6 +139,15 @@ def list_tweets(args):
         template = '{timestamp} {content}'
     elif args.i:
         template = '{timestamp}'
+    elif args.t:
+        template = '{timestamp} {content}'
+        for index, tweet in enumerate(tweets):
+            timestamp = tweet[0]
+            timestamp = time.localtime(timestamp)
+            timestamp = time.strftime('%d/%m/%y %H:%M', timestamp)
+            tweet = list(tweet)
+            tweet[0] = timestamp
+            tweets[index] = tweet
     else:
         template = '{content}'
 
@@ -114,17 +155,22 @@ def list_tweets(args):
     print('\n'.join(output))
 
 
+def list_archives():
+    archives = archive_folder_path.iterdir()
+    output = [a.stem for a in archives]
+    print('\n'.join(output))
+
+
 def main():
     args = parser.parse_args()
     if args.subcommand is None:
-        new_tweet(args.tweet)
+        new_tweet(args)
     elif args.subcommand == 'archive':
         archive()
     elif args.subcommand == 'list':
         list_tweets(args)
-
-    print('Press enter to exit')
-    input()
+    elif args.subcommand == 'list-archives':
+        list_archives()
 
 
 if __name__ == '__main__':
