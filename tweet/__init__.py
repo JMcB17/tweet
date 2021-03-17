@@ -6,7 +6,7 @@ import sqlite3
 from pathlib import Path
 
 
-__version__ = '0.10.1'
+__version__ = '0.20.0'
 
 
 CREATE_TABLE_SQL = """CREATE TABLE tweets
@@ -20,10 +20,10 @@ archive_folder_path = db_folder_path / 'archive'
 
 parser = argparse.ArgumentParser(description='Random thought saver. Just run it, or use -h for more info.')
 parser.add_argument('--version', action='version', version=__version__)
-parser.add_argument('tweet', nargs='?', default=None,
-                    help="'tweet' content. If you don't give it as an option, you'll be prompted to input it.")
+parser.add_argument('tweet', nargs='?',
+                    help="'tweet' content. If you don't give it as an option, you'll be prompted to input it")
 parser.add_argument('--archive', action='store_true',
-                    help='Archive the old tweets file and make a new one.')
+                    help='archive the old tweets file, make a new one, and exit')
 
 
 def get_db():
@@ -53,6 +53,8 @@ def new_tweet(content):
     if len(content.encode('utf-8')) > TEXT_MAX_SIZE:
         print('Tweet is too long')
         return
+    else:
+        print(f'len({content}) characters')
 
     conn, cur = get_db()
     cur.execute('INSERT INTO tweets VALUES (?,?)', (timestamp, content))
