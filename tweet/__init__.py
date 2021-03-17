@@ -54,7 +54,8 @@ def get_db():
     return conn, cur
 
 
-def new_tweet(content):
+def new_tweet(args):
+    content = args.content
     if content is None:
         content = input('New tweet:\n')
     elif isinstance(content, list):
@@ -96,15 +97,15 @@ def archive():
     print('Created new tweets file')
 
 
-def list_tweets(l, i):
+def list_tweets(args):
     conn, cur = get_db()
     cur.execute('SELECT * FROM tweets')
     tweets = cur.fetchall()
     conn.close()
 
-    if l:
+    if args.l:
         template = '{timestamp} {content}'
-    elif i:
+    elif args.i:
         template = '{timestamp}'
     else:
         template = '{content}'
@@ -120,7 +121,7 @@ def main():
     elif args.subcommand == 'archive':
         archive()
     elif args.subcommand == 'list':
-        list_tweets(l=args.l, i=args.i)
+        list_tweets(args)
 
     print('Press enter to exit')
     input()
