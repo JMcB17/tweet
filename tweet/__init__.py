@@ -20,10 +20,11 @@ archive_folder_path = db_folder_path / 'archive'
 
 parser = argparse.ArgumentParser(description='Random thought saver. Just run it, or use -h for more info.')
 parser.add_argument('--version', action='version', version=__version__)
-parser.add_argument('tweet', nargs='?',
+parser.add_argument('-t', '--tweet', nargs='+',
                     help="'tweet' content. If you don't give it as an option, you'll be prompted to input it")
-parser.add_argument('--archive', action='store_true',
-                    help='archive the old tweets file, make a new one, and exit')
+subparsers = parser.add_subparsers(help='subcommands', dest='subcommand')
+archive_parser = subparsers.add_parser(name='archive',
+                                       help='archive the old tweets file, make a new one, and exit')
 
 
 def get_db():
@@ -44,6 +45,8 @@ def get_db():
 def new_tweet(content):
     if content is None:
         content = input('New tweet:\n')
+    elif isinstance(content, list):
+        content = ' '.join(content)
 
     timestamp = time.time()
 
@@ -54,7 +57,7 @@ def new_tweet(content):
         print('Tweet is too long')
         return
     else:
-        print(f'len({content}) characters')
+        print(f'{len(content)} characters')
 
     conn, cur = get_db()
     cur.execute('INSERT INTO tweets VALUES (?,?)', (timestamp, content))
@@ -83,10 +86,11 @@ def archive():
 
 def main():
     args = parser.parse_args()
-    if args.archive:
-        archive()
-    else:
+    if args.subcommand is None:
         new_tweet(args.tweet)
+    elif args.subcommand == 'archive':
+        archive()
+
     print('Press enter to exit')
     input()
 
