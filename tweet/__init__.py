@@ -6,7 +6,7 @@ import sqlite3
 from pathlib import Path
 
 
-__version__ = '0.20.0'
+__version__ = '0.21.0'
 
 
 CREATE_TABLE_SQL = """CREATE TABLE tweets
@@ -23,8 +23,20 @@ parser.add_argument('--version', action='version', version=__version__)
 parser.add_argument('-t', '--tweet', nargs='+',
                     help="'tweet' content. If you don't give it as an option, you'll be prompted to input it")
 subparsers = parser.add_subparsers(help='subcommands', dest='subcommand')
+
 archive_parser = subparsers.add_parser(name='archive',
                                        help='archive the old tweets file, make a new one, and exit')
+
+list_parser = subparsers.add_parser(name='list',
+                                    help='list tweets')
+list_parser.add_argument('-l', action='store_true',
+                         help='show ids as well')
+list_parser.add_argument('-i', '--id-only', action='store_true', dest='i',
+                         help='show only ids')
+list_parser.add_argument('-t', '--timestamp', action='store_true', dest='t',
+                         help='show human readable timestamps as well')
+list_parser.add_argument('-n', '--max-count', type=int, dest='n',
+                         help='limit the number of tweets to output')
 
 
 def get_db():
@@ -84,12 +96,31 @@ def archive():
     print('Created new tweets file')
 
 
+def list_tweets(l, i):
+    conn, cur = get_db()
+    cur.execute('SELECT * FROM tweets')
+    tweets = cur.fetchall()
+    conn.close()
+
+    if l:
+        template = '{timestamp} {content}'
+    elif i:
+        template = '{timestamp}'
+    else:
+        template = '{content}'
+
+    output = [template.format(timestamp=t[0], content=t[1]) for t in tweets]
+    print('\n'.join(output))
+
+
 def main():
     args = parser.parse_args()
     if args.subcommand is None:
         new_tweet(args.tweet)
     elif args.subcommand == 'archive':
         archive()
+    elif args.subcommand == 'list':
+        list_tweets(l=args.l, i=args.i)
 
     print('Press enter to exit')
     input()
