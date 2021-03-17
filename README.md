@@ -11,4 +11,4 @@ Todo:
 - [ ] get by id
 - [ ] get random
 - [x] archive
-- [ ] get from archive
+- [x] get from archive

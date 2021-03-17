@@ -6,11 +6,14 @@ import sqlite3
 from pathlib import Path
 
 
-__version__ = '0.22.0'
+__version__ = '0.23.0'
 
 
 CREATE_TABLE_SQL = """CREATE TABLE tweets
-(timestamp DOUBLE(16, 6) PRIMARY KEY, content TEXT NOT NULL)"""
+(timestamp DOUBLE(16, 6) PRIMARY KEY, content TEXT NOT NULL);
+CREATE TABLE keyhole
+(plaintext TEXT NOT NULL, ciphertext BLOB NOT NULL);
+INSERT INTO keyhole VALUES ('lorem ipsum dolor sit amet', 'lorem ipsum dolor sit amet');"""
 TEXT_MAX_SIZE = 65535
 base_path = Path(__file__).parent
 db_folder_path = base_path / 'tweets'
