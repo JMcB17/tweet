@@ -6,6 +6,8 @@ import sqlite3
 from pathlib import Path
 
 
+# todo: store data in documents folder instead of install folder, so it's harder
+# to lose data. like I just did
 __version__ = '0.23.0'
 
 
