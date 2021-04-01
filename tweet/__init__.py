@@ -6,9 +6,7 @@ import sqlite3
 from pathlib import Path
 
 
-# todo: store data in documents folder instead of install folder, so it's harder
-# to lose data. like I just did
-__version__ = '0.23.0'
+__version__ = '0.24.0'
 
 
 CREATE_TABLE_SQL = """CREATE TABLE tweets
@@ -17,7 +15,7 @@ CREATE TABLE keyhole
 (plaintext TEXT NOT NULL, ciphertext BLOB NOT NULL);
 INSERT INTO keyhole VALUES ('lorem ipsum dolor sit amet', 'lorem ipsum dolor sit amet');"""
 TEXT_MAX_SIZE = 65535
-base_path = Path(__file__).parent
+base_path = Path.home()
 db_folder_path = base_path / 'tweets'
 db_file_path = db_folder_path / 'tweets.db'
 archive_folder_path = db_folder_path / 'archive'
