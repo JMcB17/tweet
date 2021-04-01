@@ -6,13 +6,13 @@ import sqlite3
 from pathlib import Path
 
 
-__version__ = '0.22.0'
+__version__ = '0.23.0'
 
 
 CREATE_TABLE_SQL = """CREATE TABLE tweets
 (timestamp DOUBLE(16, 6) PRIMARY KEY, content TEXT NOT NULL)"""
 TEXT_MAX_SIZE = 65535
-base_path = Path(__file__).parent
+base_path = Path.home()
 db_folder_path = base_path / 'tweets'
 db_file_path = db_folder_path / 'tweets.db'
 archive_folder_path = db_folder_path / 'archive'
