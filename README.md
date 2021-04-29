@@ -12,3 +12,4 @@ Todo:
 - [ ] get random
 - [x] archive
 - [ ] get from archive
+- [ ] cryptographic signing (timestamp)
