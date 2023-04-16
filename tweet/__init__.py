@@ -6,7 +6,7 @@ from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from sys import gettrace
 
-__version__ = '0.23.0'
+__version__ = '0.24.0'
 
 if gettrace is not None and gettrace():
     HOME_DIR = Path.cwd().joinpath('instance')
@@ -32,6 +32,9 @@ def get_parser() -> ArgumentParser:
         '--tweet',
         help="'tweet' content. If you don't give it as an option, you'll be prompted to input it",
     )
+    parser.add_argument('-p', '--pause', help='wait for enter after typing')
+
+    # subcommands
     subparsers = parser.add_subparsers(help='subcommands', dest='subcommand')
 
     list_parser = subparsers.add_parser(name='list', help='list tweets')
@@ -82,7 +85,6 @@ def get_db() -> sqlite3.Connection:
 
 def new_tweet(args: Namespace):
     content = args.tweet
-    pause = content is None
     if content is None:
         content = input('New tweet:\n')
     elif isinstance(content, list):
@@ -105,7 +107,7 @@ def new_tweet(args: Namespace):
     conn.close()
     print('Saved tweet')
 
-    if pause:
+    if args.pause:
         print('Press enter to exit')
         input()
 
