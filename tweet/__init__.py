@@ -18,8 +18,9 @@ NAME = 'jpytweet'
 DB_SUFFIX = '.db'
 CONFIG_DIR = HOME_DIR.joinpath('.config/').joinpath(NAME)
 SHARE_DIR = HOME_DIR.joinpath('.local/share/').joinpath(NAME)
-ARCHIVE_DIR = SHARE_DIR.joinpath('archive')
-DB_PATH = SHARE_DIR.joinpath(f'posts').with_suffix(DB_SUFFIX)
+DB_DIR = CONFIG_DIR
+ARCHIVE_DIR = DB_DIR.joinpath('archive/')
+DB_PATH = DB_DIR.joinpath(f'posts').with_suffix(DB_SUFFIX)
 
 
 def get_parser() -> ArgumentParser:
