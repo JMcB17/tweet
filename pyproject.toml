@@ -1,12 +1,13 @@
 [project]
 name = "tweet"
 version = "0.23.0"
-authors = [
-  { name="joelsgp", email="joelsgp@protonmail.com" },
-]
 description = "Random thought saver"
 readme = "README.md"
 requires-python = ">=3.8"
+license.file = "LICENSE"
+authors = [
+  { name="joelsgp", email="joelsgp@protonmail.com" },
+]
 classifiers = [
     "Environment :: Console",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -15,8 +16,8 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 
-[project.scripts]
-tweet = "tweet:main"
-
 [project.urls]
 "Homepage" = "https://github.com/joelsgp/tweet"
+
+[project.scripts]
+tweet = "tweet:main"
