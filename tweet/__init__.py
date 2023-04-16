@@ -1,70 +1,91 @@
 #!/usr/bin/env python
 
-import time
-import argparse
 import sqlite3
+import time
+from argparse import ArgumentParser, Namespace
 from pathlib import Path
-
+from sys import gettrace
 
 __version__ = '0.24.0'
 
+if gettrace is not None and gettrace():
+    HOME_DIR = Path.cwd().joinpath('instance')
+    print(HOME_DIR)
+else:
+    HOME_DIR = Path.home()
 
-CREATE_TABLE_SQL = """CREATE TABLE tweets
-(timestamp DOUBLE(16, 6) PRIMARY KEY, content TEXT NOT NULL);
-CREATE TABLE keyhole
-(plaintext TEXT NOT NULL, ciphertext BLOB NOT NULL);
-INSERT INTO keyhole VALUES ('lorem ipsum dolor sit amet', 'lorem ipsum dolor sit amet');"""
-TEXT_MAX_SIZE = 65535
-base_path = Path.home()
-db_folder_path = base_path / 'tweets'
-db_file_path = db_folder_path / 'tweets.db'
-archive_folder_path = db_folder_path / 'archive'
-
-
-parser = argparse.ArgumentParser(description='Random thought saver. Just run it, or use -h for more info.')
-parser.add_argument('--version', action='version', version=__version__)
-parser.add_argument('-t', '--tweet',
-                    help="'tweet' content. If you don't give it as an option, you'll be prompted to input it")
-subparsers = parser.add_subparsers(help='subcommands', dest='subcommand')
-
-archive_parser = subparsers.add_parser(name='archive',
-                                       help='archive the old tweets file and make a new one')
-
-list_parser = subparsers.add_parser(name='list',
-                                    help='list tweets')
-list_parser.add_argument('-a', '--archive',
-                         help='use this archive file instead of the current file')
-list_parser.add_argument('-l', action='store_true',
-                         help='show ids as well')
-list_parser.add_argument('-i', '--id-only', action='store_true', dest='i',
-                         help='show only ids')
-list_parser.add_argument('-t', '--timestamp', action='store_true', dest='t',
-                         help='show human readable timestamps as well')
-list_parser.add_argument('-n', '--max-count', type=int, dest='n',
-                         help='limit the number of tweets to output')
-
-list_archives_parser = subparsers.add_parser(name='list-archives',
-                                             help='list archives')
+NAME = 'jpytweet'
+DB_SUFFIX = '.db'
+CONFIG_DIR = HOME_DIR.joinpath('.config/').joinpath(NAME)
+SHARE_DIR = HOME_DIR.joinpath('.local/share/').joinpath(NAME)
+DB_DIR = CONFIG_DIR
+ARCHIVE_DIR = DB_DIR.joinpath('archive/')
+DB_PATH = DB_DIR.joinpath(f'posts').with_suffix(DB_SUFFIX)
 
 
-def get_db():
-    if not db_folder_path.is_dir():
-        db_folder_path.mkdir()
-    create_table = not db_file_path.is_file()
+def get_parser() -> ArgumentParser:
+    parser = ArgumentParser(
+        description='Random thought saver. Just run it, or use -h for more info.'
+    )
+    parser.add_argument('--version', action='version', version=__version__)
+    parser.add_argument(
+        '-t',
+        '--tweet',
+        help="'tweet' content. If you don't give it as an option, you'll be prompted to input it",
+    )
+    parser.add_argument('-p', '--pause', help='wait for enter after typing')
 
-    conn = sqlite3.connect(db_file_path)
-    cur = conn.cursor()
+    # subcommands
+    subparsers = parser.add_subparsers(help='subcommands', dest='subcommand')
 
-    if create_table:
-        cur.execute(CREATE_TABLE_SQL)
-        conn.commit()
+    list_parser = subparsers.add_parser(name='list', help='list tweets')
+    list_parser.add_argument(
+        '-a', '--archive', help='use this archive file instead of the current file'
+    )
+    list_parser.add_argument('-l', action='store_true', help='show ids as well')
+    list_parser.add_argument(
+        '-i', '--id-only', action='store_true', dest='i', help='show only ids'
+    )
+    list_parser.add_argument(
+        '-t',
+        '--timestamp',
+        action='store_true',
+        dest='t',
+        help='show human readable timestamps as well',
+    )
+    list_parser.add_argument(
+        '-n',
+        '--max-count',
+        type=int,
+        dest='n',
+        help='limit the number of tweets to output',
+    )
 
-    return conn, cur
+    subparsers.add_parser(
+        name='archive', help='archive the old tweets file and make a new one'
+    )
+    subparsers.add_parser(name='list-archives', help='list archives')
+
+    return parser
 
 
-def new_tweet(args):
+def get_db() -> sqlite3.Connection:
+    SHARE_DIR.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS tweets
+        (timestamp DOUBLE NOT NULL PRIMARY KEY, content TEXT NOT NULL)
+        """
+    )
+    conn.commit()
+
+    return conn
+
+
+def new_tweet(args: Namespace):
     content = args.tweet
-    pause = content is None
     if content is None:
         content = input('New tweet:\n')
     elif isinstance(content, list):
@@ -75,66 +96,63 @@ def new_tweet(args):
     if not content:
         print('Tweet is empty')
         return
-    if len(content.encode('utf-8')) > TEXT_MAX_SIZE:
-        print('Tweet is too long')
-        return
+    # if len(content.encode('utf-8')) > TEXT_MAX_SIZE:
+    #     print('Tweet is too long')
+    #     return
     else:
         print(f'{len(content)} characters')
 
-    conn, cur = get_db()
-    cur.execute('INSERT INTO tweets VALUES (?,?)', (timestamp, content))
+    conn = get_db()
+    conn.execute('INSERT INTO tweets VALUES (?,?)', (timestamp, content))
     conn.commit()
     conn.close()
     print('Saved tweet')
 
-    if pause:
+    if args.pause:
         print('Press enter to exit')
         input()
 
 
 def archive():
-    timestamp = time.time()
-
-    if not db_file_path.is_file():
+    if not DB_PATH.is_file():
         print("Tweets file doesn't exist yet")
         return
 
-    new_db_file_path = archive_folder_path.joinpath(str(int(timestamp))).with_suffix(db_file_path.suffix)
-    if not archive_folder_path.is_dir():
-        archive_folder_path.mkdir()
-    db_file_path.rename(new_db_file_path)
+    timestamp = str(int(time.time()))
+    new_db_file_path = ARCHIVE_DIR.joinpath(timestamp).with_suffix(DB_SUFFIX)
+    ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
+    DB_PATH.rename(new_db_file_path)
     print('Archived old tweets file')
 
-    conn, cur = get_db()
+    conn = get_db()
     conn.close()
     print('Created new tweets file')
 
 
-def get_archive_db(archive_name):
-    archive_file_path = archive_folder_path.joinpath(archive_name).with_suffix('.db')
+def get_archive_db(archive_name: str):
+    archive_file_path = ARCHIVE_DIR.joinpath(archive_name).with_suffix('.db')
 
     if not archive_file_path.is_file():
         raise FileNotFoundError
     else:
         conn = sqlite3.connect(archive_file_path)
-        cur = conn.cursor()
-        return conn, cur
+        return conn
 
 
-def list_tweets(args):
+def list_tweets(args: Namespace):
     if args.archive:
         try:
-            conn, cur = get_archive_db(args.archive)
+            conn = get_archive_db(args.archive)
         except FileNotFoundError:
             print("That archive doesn't exist!")
             return
     else:
-        conn, cur = get_db()
+        conn = get_db()
 
     if args.n is not None:
-        cur.execute('SELECT * FROM tweets LIMIT ?', (args.n,))
+        cur = conn.execute('SELECT * FROM tweets LIMIT ?', (args.n,))
     else:
-        cur.execute('SELECT * FROM tweets')
+        cur = conn.execute('SELECT * FROM tweets')
     tweets = cur.fetchall()
     conn.close()
 
@@ -159,19 +177,20 @@ def list_tweets(args):
 
 
 def list_archives():
-    archives = archive_folder_path.iterdir()
+    archives = ARCHIVE_DIR.iterdir()
     output = [a.stem for a in archives]
     print('\n'.join(output))
 
 
 def main():
+    parser = get_parser()
     args = parser.parse_args()
     if args.subcommand is None:
         new_tweet(args)
-    elif args.subcommand == 'archive':
-        archive()
     elif args.subcommand == 'list':
         list_tweets(args)
+    elif args.subcommand == 'archive':
+        archive()
     elif args.subcommand == 'list-archives':
         list_archives()
 
