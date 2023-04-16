@@ -1,2 +1,3 @@
-import tweet
-tweet.main()
+from tweet import main
+
+main()
