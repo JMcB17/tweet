@@ -1,12 +1,19 @@
 #!/usr/bin/env python
 
+import readline
 import sqlite3
+import sys
 import time
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from sys import gettrace
 
-__version__ = '0.24.0'
+__version__ = '0.25.0'
+
+try:
+    readline.read_init_file()
+except FileNotFoundError:
+    pass
 
 if gettrace is not None and gettrace():
     HOME_DIR = Path.cwd().joinpath('instance')
@@ -182,9 +189,7 @@ def list_archives():
     print('\n'.join(output))
 
 
-def main():
-    parser = get_parser()
-    args = parser.parse_args()
+def run_from_args(args: Namespace):
     if args.subcommand is None:
         new_tweet(args)
     elif args.subcommand == 'list':
@@ -193,6 +198,16 @@ def main():
         archive()
     elif args.subcommand == 'list-archives':
         list_archives()
+
+
+def main():
+    parser = get_parser()
+    args = parser.parse_args()
+    try:
+        run_from_args(args)
+    except KeyboardInterrupt:
+        print('^C')
+        sys.exit(1)
 
 
 if __name__ == '__main__':
