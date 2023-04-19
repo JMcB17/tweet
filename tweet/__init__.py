@@ -5,11 +5,11 @@ import re
 import readline
 import sqlite3
 import sys
-import time
 from argparse import ArgumentParser, Namespace
+from datetime import datetime
 from pathlib import Path
 
-__version__ = '0.26.1'
+__version__ = '0.26.2'
 
 NAME = 'jpytweet'
 DB_SUFFIX = '.db'
@@ -18,6 +18,7 @@ SHARE_DIR = Path('.local/share/').joinpath(NAME)
 BASE_DIR = CONFIG_DIR
 ARCHIVE_DIR = BASE_DIR.joinpath('archive/')
 DB_DIR = BASE_DIR.joinpath('posts/')
+TIME_FORMAT = '%d/%m/%y %H:%M'
 
 
 def get_parser() -> ArgumentParser:
@@ -136,7 +137,7 @@ def new_tweet(args: Namespace):
     with conn:
         conn.execute(
             'INSERT INTO tweets VALUES (:timestamp, :content)',
-            {'timestamp': time.time(), 'content': content},
+            {'timestamp': datetime.now().timestamp(), 'content': content},
         )
     conn.close()
     print('Saved tweet')
@@ -152,7 +153,7 @@ def archive_db():
         print("Tweets file doesn't exist yet")
         return
 
-    timestamp = str(int(time.time()))
+    timestamp = datetime.now().isoformat()
     archive_db_path = get_archive_db_path(timestamp)
     archive_db_path.parent.mkdir(parents=True, exist_ok=True)
     db_path.rename(archive_db_path)
@@ -174,7 +175,7 @@ def list_tweets(args: Namespace):
 
     # -1 means no limit
     limit = args.n or -1
-    cur = conn.execute('SELECT * FROM tweets LIMIT :n', {'n': limit})
+    cur = conn.execute('SELECT (timestamp, content) FROM tweets LIMIT :n', {'n': limit})
     tweets = cur.fetchall()
     conn.close()
 
@@ -186,8 +187,8 @@ def list_tweets(args: Namespace):
         template = '{timestamp} {content}'
         for index, tweet in enumerate(tweets):
             timestamp = tweet[0]
-            timestamp = time.localtime(timestamp)
-            timestamp = time.strftime('%d/%m/%y %H:%M', timestamp)
+            timestamp = datetime.fromtimestamp(timestamp)
+            timestamp = timestamp.strftime(TIME_FORMAT)
             tweet = list(tweet)
             tweet[0] = timestamp
             tweets[index] = tweet
