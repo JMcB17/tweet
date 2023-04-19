@@ -1,5 +1,7 @@
 """Random thought saver"""
 
+import platform
+import re
 import readline
 import sqlite3
 import sys
@@ -7,7 +9,7 @@ import time
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
-__version__ = '0.25.2'
+__version__ = '0.26.0'
 
 NAME = 'jpytweet'
 DB_SUFFIX = '.db'
@@ -15,7 +17,7 @@ CONFIG_DIR = Path('.config/').joinpath(NAME)
 SHARE_DIR = Path('.local/share/').joinpath(NAME)
 DB_DIR = CONFIG_DIR
 ARCHIVE_DIR = DB_DIR.joinpath('archive/')
-DB_PATH = DB_DIR.joinpath(f'posts').with_suffix(DB_SUFFIX)
+DB_PATH = Path('posts').with_suffix(DB_SUFFIX)
 
 
 def get_parser() -> ArgumentParser:
@@ -73,7 +75,10 @@ def get_home_dir() -> Path:
 
 
 def get_db_path() -> Path:
-    return get_home_dir().joinpath(DB_PATH)
+    hostname = platform.node()
+    escaped = re.sub(r'[^a-zA-Z0-9-]', '', hostname)
+    db_path = get_home_dir().joinpath(DB_DIR).joinpath(escaped).joinpath(DB_PATH)
+    return db_path
 
 
 def get_db() -> sqlite3.Connection:
@@ -93,22 +98,22 @@ def get_db() -> sqlite3.Connection:
 
 
 def get_archive_db_path(archive_name: str) -> Path:
-    return (
+    archive_db_path = (
         get_home_dir()
         .joinpath(ARCHIVE_DIR)
         .joinpath(archive_name)
         .with_suffix(DB_SUFFIX)
     )
+    return archive_db_path
 
 
 def get_archive_db(archive_name: str) -> sqlite3.Connection:
     archive_path = get_archive_db_path(archive_name)
 
     if not archive_path.is_file():
-        raise FileNotFoundError
-    else:
-        conn = sqlite3.connect(archive_path)
-        return conn
+        raise FileNotFoundError(f'No archive at {archive_path}')
+    conn = sqlite3.connect(archive_path)
+    return conn
 
 
 def new_tweet(args: Namespace):
