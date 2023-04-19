@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """Random thought saver"""
 
 import readline
@@ -8,25 +6,13 @@ import sys
 import time
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
-from sys import gettrace
 
-__version__ = '0.25.1'
-
-try:
-    readline.read_init_file()
-except FileNotFoundError:
-    pass
-
-if gettrace is not None and gettrace():
-    HOME_DIR = Path.cwd().joinpath('instance')
-    print(HOME_DIR)
-else:
-    HOME_DIR = Path.home()
+__version__ = '0.25.2'
 
 NAME = 'jpytweet'
 DB_SUFFIX = '.db'
-CONFIG_DIR = HOME_DIR.joinpath('.config/').joinpath(NAME)
-SHARE_DIR = HOME_DIR.joinpath('.local/share/').joinpath(NAME)
+CONFIG_DIR = Path('.config/').joinpath(NAME)
+SHARE_DIR = Path('.local/share/').joinpath(NAME)
 DB_DIR = CONFIG_DIR
 ARCHIVE_DIR = DB_DIR.joinpath('archive/')
 DB_PATH = DB_DIR.joinpath(f'posts').with_suffix(DB_SUFFIX)
@@ -76,19 +62,53 @@ def get_parser() -> ArgumentParser:
     return parser
 
 
-def get_db() -> sqlite3.Connection:
-    SHARE_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
+def get_home_dir() -> Path:
+    if sys.gettrace is not None and sys.gettrace():
+        # use local copy if debugging
+        home_dir = Path.cwd().joinpath('instance')
+        print(f'debug: {home_dir}', file=sys.stderr)
+    else:
+        home_dir = Path.home()
+    return home_dir
 
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS tweets
-        (timestamp DOUBLE NOT NULL PRIMARY KEY, content TEXT NOT NULL)
-        """
-    )
-    conn.commit()
+
+def get_db_path() -> Path:
+    return get_home_dir().joinpath(DB_PATH)
+
+
+def get_db() -> sqlite3.Connection:
+    db_path = get_db_path()
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(db_path)
+
+    with conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS tweets
+            (timestamp DOUBLE NOT NULL PRIMARY KEY, content TEXT NOT NULL)
+            """
+        )
 
     return conn
+
+
+def get_archive_db_path(archive_name: str) -> Path:
+    return (
+        get_home_dir()
+        .joinpath(ARCHIVE_DIR)
+        .joinpath(archive_name)
+        .with_suffix(DB_SUFFIX)
+    )
+
+
+def get_archive_db(archive_name: str) -> sqlite3.Connection:
+    archive_path = get_archive_db_path(archive_name)
+
+    if not archive_path.is_file():
+        raise FileNotFoundError
+    else:
+        conn = sqlite3.connect(archive_path)
+        return conn
 
 
 def new_tweet(args: Namespace):
@@ -97,8 +117,6 @@ def new_tweet(args: Namespace):
         content = input('New tweet:\n')
     elif isinstance(content, list):
         content = ' '.join(content)
-
-    timestamp = time.time()
 
     if not content:
         print('Tweet is empty')
@@ -110,8 +128,11 @@ def new_tweet(args: Namespace):
         print(f'{len(content)} characters')
 
     conn = get_db()
-    conn.execute('INSERT INTO tweets VALUES (?,?)', (timestamp, content))
-    conn.commit()
+    with conn:
+        conn.execute(
+            'INSERT INTO tweets VALUES (:timestamp, :content)',
+            {'timestamp': time.time(), 'content': content},
+        )
     conn.close()
     print('Saved tweet')
 
@@ -120,30 +141,20 @@ def new_tweet(args: Namespace):
         input()
 
 
-def archive():
-    if not DB_PATH.is_file():
+def archive_db():
+    db_path = get_db_path()
+    if not db_path.is_file():
         print("Tweets file doesn't exist yet")
         return
 
     timestamp = str(int(time.time()))
-    new_db_file_path = ARCHIVE_DIR.joinpath(timestamp).with_suffix(DB_SUFFIX)
-    ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)
-    DB_PATH.rename(new_db_file_path)
+    archive_db_path = get_archive_db_path(timestamp)
+    archive_db_path.parent.mkdir(parents=True, exist_ok=True)
+    db_path.rename(archive_db_path)
     print('Archived old tweets file')
 
-    conn = get_db()
-    conn.close()
+    get_db().close()
     print('Created new tweets file')
-
-
-def get_archive_db(archive_name: str):
-    archive_file_path = ARCHIVE_DIR.joinpath(archive_name).with_suffix('.db')
-
-    if not archive_file_path.is_file():
-        raise FileNotFoundError
-    else:
-        conn = sqlite3.connect(archive_file_path)
-        return conn
 
 
 def list_tweets(args: Namespace):
@@ -156,10 +167,10 @@ def list_tweets(args: Namespace):
     else:
         conn = get_db()
 
-    if args.n is not None:
-        cur = conn.execute('SELECT * FROM tweets LIMIT ?', (args.n,))
-    else:
-        cur = conn.execute('SELECT * FROM tweets')
+    # todo max limit?
+    # -1 means no limit
+    limit = args.n or -1
+    cur = conn.execute('SELECT * FROM tweets LIMIT :n', {'n': limit})
     tweets = cur.fetchall()
     conn.close()
 
@@ -184,7 +195,8 @@ def list_tweets(args: Namespace):
 
 
 def list_archives():
-    archives = ARCHIVE_DIR.iterdir()
+    archive_dir = get_home_dir().joinpath(ARCHIVE_DIR)
+    archives = archive_dir.iterdir()
     output = [a.stem for a in archives]
     print('\n'.join(output))
 
@@ -195,7 +207,7 @@ def run_from_args(args: Namespace):
     elif args.subcommand == 'list':
         list_tweets(args)
     elif args.subcommand == 'archive':
-        archive()
+        archive_db()
     elif args.subcommand == 'list-archives':
         list_archives()
 
@@ -203,6 +215,10 @@ def run_from_args(args: Namespace):
 def main():
     parser = get_parser()
     args = parser.parse_args()
+    try:
+        readline.read_init_file()
+    except FileNotFoundError:
+        pass
     try:
         run_from_args(args)
     except KeyboardInterrupt:
