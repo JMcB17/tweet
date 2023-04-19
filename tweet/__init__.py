@@ -9,15 +9,15 @@ import time
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
-__version__ = '0.26.0'
+__version__ = '0.26.1'
 
 NAME = 'jpytweet'
 DB_SUFFIX = '.db'
 CONFIG_DIR = Path('.config/').joinpath(NAME)
 SHARE_DIR = Path('.local/share/').joinpath(NAME)
-DB_DIR = CONFIG_DIR
-ARCHIVE_DIR = DB_DIR.joinpath('archive/')
-DB_PATH = Path('posts').with_suffix(DB_SUFFIX)
+BASE_DIR = CONFIG_DIR
+ARCHIVE_DIR = BASE_DIR.joinpath('archive/')
+DB_DIR = BASE_DIR.joinpath('posts/')
 
 
 def get_parser() -> ArgumentParser:
@@ -77,7 +77,7 @@ def get_home_dir() -> Path:
 def get_db_path() -> Path:
     hostname = platform.node()
     escaped = re.sub(r'[^a-zA-Z0-9-]', '', hostname)
-    db_path = get_home_dir().joinpath(DB_DIR).joinpath(escaped).joinpath(DB_PATH)
+    db_path = get_home_dir().joinpath(DB_DIR).joinpath(escaped).with_suffix(DB_SUFFIX)
     return db_path
 
 
@@ -172,7 +172,6 @@ def list_tweets(args: Namespace):
     else:
         conn = get_db()
 
-    # todo max limit?
     # -1 means no limit
     limit = args.n or -1
     cur = conn.execute('SELECT * FROM tweets LIMIT :n', {'n': limit})
