@@ -9,7 +9,7 @@ from argparse import ArgumentParser, Namespace
 from datetime import datetime
 from pathlib import Path
 
-__version__ = '0.26.3'
+__version__ = '0.26.4'
 NAME = 'jpytweet'
 DB_SUFFIX = '.db'
 CONFIG_DIR = Path('.config/').joinpath(NAME)
@@ -141,7 +141,7 @@ def new_tweet(args: Namespace):
     conn = get_db()
     with conn:
         conn.execute(
-            'INSERT INTO tweets VALUES (:timestamp, :content)',
+            'INSERT INTO tweets (timestamp, content) VALUES (:timestamp, :content)',
             {'timestamp': datetime.now().timestamp(), 'content': content},
         )
     conn.close()
@@ -181,7 +181,7 @@ def list_tweets(args: Namespace):
 
     # -1 means no limit
     limit = args.n or -1
-    cur = conn.execute('SELECT (timestamp, content) FROM tweets LIMIT :n', {'n': limit})
+    cur = conn.execute('SELECT timestamp, content FROM tweets LIMIT :n', {'n': limit})
     tweets = cur.fetchall()
     conn.close()
 
