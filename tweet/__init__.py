@@ -9,8 +9,7 @@ from argparse import ArgumentParser, Namespace
 from datetime import datetime
 from pathlib import Path
 
-__version__ = '0.26.2'
-
+__version__ = '0.26.3'
 NAME = 'jpytweet'
 DB_SUFFIX = '.db'
 CONFIG_DIR = Path('.config/').joinpath(NAME)
@@ -18,6 +17,7 @@ SHARE_DIR = Path('.local/share/').joinpath(NAME)
 BASE_DIR = CONFIG_DIR
 ARCHIVE_DIR = BASE_DIR.joinpath('archive/')
 DB_DIR = BASE_DIR.joinpath('posts/')
+ESCAPE_PATH_RE = re.compile(r'[^a-zA-Z0-9-]')
 TIME_FORMAT = '%d/%m/%y %H:%M'
 
 
@@ -63,6 +63,11 @@ def get_parser() -> ArgumentParser:
     subparsers.add_parser(name='list-archives', help='list archives')
 
     return parser
+
+
+def escape_path(path: str) -> str:
+    escaped = re.sub(ESCAPE_PATH_RE, '', path)
+    return escaped
 
 
 def get_home_dir() -> Path:
@@ -154,7 +159,8 @@ def archive_db():
         return
 
     timestamp = datetime.now().isoformat()
-    archive_db_path = get_archive_db_path(timestamp)
+    name = escape_path(timestamp)
+    archive_db_path = get_archive_db_path(name)
     archive_db_path.parent.mkdir(parents=True, exist_ok=True)
     db_path.rename(archive_db_path)
     print('Archived old tweets file')
