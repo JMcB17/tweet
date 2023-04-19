@@ -1,7 +1,9 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
 [project]
 name = "tweet"
-version = "0.25.0"
-description = "Random thought saver"
 readme = "README.md"
 requires-python = ">=3.8"
 license.file = "LICENSE"
@@ -15,6 +17,7 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
 ]
+dynamic = ["version", "description"]
 
 [project.urls]
 "Homepage" = "https://github.com/joelsgp/tweet"

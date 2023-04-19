@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+"""Random thought saver"""
+
 import readline
 import sqlite3
 import sys
@@ -8,7 +10,7 @@ from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from sys import gettrace
 
-__version__ = '0.25.0'
+__version__ = '0.25.1'
 
 try:
     readline.read_init_file()
@@ -31,10 +33,8 @@ DB_PATH = DB_DIR.joinpath(f'posts').with_suffix(DB_SUFFIX)
 
 
 def get_parser() -> ArgumentParser:
-    parser = ArgumentParser(
-        description='Random thought saver. Just run it, or use -h for more info.'
-    )
-    parser.add_argument('--version', action='version', version=__version__)
+    parser = ArgumentParser(description=__doc__)
+    parser.add_argument('-V', '--version', action='version', version=__version__)
     parser.add_argument(
         '-t',
         '--tweet',
